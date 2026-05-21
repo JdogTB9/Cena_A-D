@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>BUDGET FLIGHT — Aerospace &amp; Defense</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Courier New', Consolas, monospace;
+    touch-action: manipulation;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #game-wrapper {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #game-canvas {
+    display: block;
+    image-rendering: pixelated;
+  }
+
+  /* Overlay de pantallas */
+  .screen {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: rgba(10, 10, 30, 0.88);
+    padding: 5%;
+    gap: 3%;
+  }
+  .screen.active { display: flex; }
+
+  /* Tipografía base */
+  .title-main {
+    color: #1E3A8A;
+    font-size: clamp(18px, 6vw, 40px);
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 20px #1E3A8A88;
+  }
+  .title-sub {
+    color: #888;
+    font-size: clamp(10px, 3vw, 18px);
+    text-align: center;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .text-denied {
+    color: #DC2626;
+    font-size: clamp(20px, 7vw, 48px);
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    text-shadow: 0 0 20px #DC262688;
+    animation: pulse-denied 1s ease-in-out infinite alternate;
+  }
+  @keyframes pulse-denied {
+    from { opacity: 0.8; transform: scale(1); }
+    to   { opacity: 1;   transform: scale(1.03); }
+  }
+
+  /* Inputs y botones */
+  input[type="text"] {
+    background: #0d0d1a;
+    border: 2px solid #1E3A8A;
+    color: #eee;
+    font-family: inherit;
+    font-size: clamp(14px, 4vw, 22px);
+    padding: 8px 14px;
+    text-align: center;
+    width: 80%;
+    max-width: 260px;
+    border-radius: 4px;
+    outline: none;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  input[type="text"]::placeholder { color: #444; text-transform: none; }
+  input[type="text"]:focus { border-color: #3B82F6; box-shadow: 0 0 8px #3B82F644; }
+
+  .btn {
+    background: #1E3A8A;
+    color: #eee;
+    border: none;
+    font-family: inherit;
+    font-size: clamp(12px, 3.5vw, 20px);
+    padding: 10px 28px;
+    cursor: pointer;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: 4px;
+    transition: background 0.15s, transform 0.1s;
+    min-width: 120px;
+  }
+  .btn:hover  { background: #2d4fa3; }
+  .btn:active { transform: scale(0.97); }
+  .btn.btn-secondary {
+    background: #222244;
+    border: 1px solid #444;
+    color: #aaa;
+  }
+  .btn.btn-secondary:hover { background: #2a2a55; color: #eee; }
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+  /* Score / info en pantallas */
+  .info-box {
+    background: #0d0d1a;
+    border: 1px solid #1E3A8A44;
+    border-radius: 6px;
+    padding: 12px 20px;
+    text-align: center;
+    min-width: 200px;
+  }
+  .info-label { color: #555; font-size: clamp(9px, 2.5vw, 13px); letter-spacing: 0.15em; text-transform: uppercase; }
+  .info-value { color: #eee; font-size: clamp(14px, 4vw, 24px); font-weight: bold; margin-top: 4px; }
+  .info-value.score-color { color: #4CAF50; }
+  .info-value.quarter-color { color: #1E3A8A; }
+  .info-value.rank-color { color: #F59E0B; }
+
+  /* Leaderboard */
+  .leaderboard-title {
+    color: #1E3A8A;
+    font-size: clamp(14px, 4vw, 24px);
+    font-weight: bold;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  .lb-list {
+    width: 90%;
+    max-width: 380px;
+    max-height: 55vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .lb-entry {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #0d0d1a;
+    border: 1px solid #1E3A8A22;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: clamp(11px, 3vw, 16px);
+  }
+  .lb-entry.highlight { border-color: #F59E0B88; background: #1a1500; }
+  .lb-pos { color: #555; min-width: 28px; font-size: 0.9em; }
+  .lb-medal { font-size: 1.1em; }
+  .lb-name { flex: 1; color: #ddd; letter-spacing: 0.05em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-score { color: #4CAF50; font-weight: bold; white-space: nowrap; }
+  .lb-time { color: #444; font-size: 0.75em; white-space: nowrap; }
+
+  /* Modo display */
+  #screen-display {
+    background: #05050f;
+    gap: 2%;
+  }
+  #screen-display .title-main {
+    font-size: clamp(24px, 7vw, 56px);
+    color: #1E3A8A;
+  }
+  #screen-display .lb-list { max-height: 70vh; }
+  #screen-display .lb-entry {
+    padding: 10px 16px;
+    font-size: clamp(14px, 3.5vw, 22px);
+  }
+  #screen-display .lb-pos { font-size: clamp(12px, 3vw, 18px); }
+
+  /* Banner offline */
+  #offline-banner {
+    position: absolute;
+    top: 8px; left: 0; right: 0;
+    text-align: center;
+    color: #F59E0B;
+    font-size: clamp(9px, 2.2vw, 12px);
+    letter-spacing: 0.08em;
+    pointer-events: none;
+    display: none;
+  }
+
+  /* HUD en partida */
+  #hud {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    display: none;
+  }
+  #hud.active { display: block; }
+  #hud-quarter {
+    position: absolute;
+    top: 8px; left: 10px;
+    color: #1E3A8A;
+    font-size: clamp(13px, 3.5vw, 20px);
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    text-shadow: 0 1px 3px #000a;
+  }
+  #hud-score {
+    position: absolute;
+    top: 8px; right: 10px;
+    color: #4CAF50;
+    font-size: clamp(11px, 3vw, 17px);
+    text-align: right;
+    text-shadow: 0 1px 3px #000a;
+  }
+  #hud-mini-rank {
+    position: absolute;
+    top: 50px; left: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: #0008;
+    border-radius: 4px;
+    padding: 4px 6px;
+  }
+  .mini-rank-row {
+    color: #aaa;
+    font-size: clamp(9px, 2.5vw, 12px);
+    white-space: nowrap;
+  }
+  .mini-rank-row.me { color: #F59E0B; font-weight: bold; }
+</style>
+</head>
+<body>
+<div id="game-wrapper">
+  <canvas id="game-canvas"></canvas>
+
+  <!-- HUD de partida -->
+  <div id="hud">
+    <div id="hud-quarter">Q1</div>
+    <div id="hud-score">€0</div>
+    <div id="hud-mini-rank"></div>
+  </div>
+
+  <!-- Banner offline -->
+  <div id="offline-banner">⚠ MODO OFFLINE — ranking local</div>
+
+  <!-- PANTALLA: Inicio -->
+  <div id="screen-init" class="screen active">
+    <div class="title-main">BUDGET FLIGHT</div>
+    <div class="title-sub">Aerospace &amp; Defense · Q4</div>
+    <input id="player-name" type="text" maxlength="12" placeholder="Tu nombre..." autocomplete="off" spellcheck="false">
+    <div class="btn-row">
+      <button id="btn-play" class="btn">▶ JUGAR</button>
+      <button id="btn-ranking-init" class="btn btn-secondary">RANKING</button>
+    </div>
+  </div>
+
+  <!-- PANTALLA: Game Over -->
+  <div id="screen-gameover" class="screen">
+    <div class="text-denied">PROPUESTA DENEGADA</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+      <div class="info-box">
+        <div class="info-label">Score final</div>
+        <div id="go-score" class="info-value score-color">€0</div>
+      </div>
+      <div class="info-box">
+        <div class="info-label">Trimestre</div>
+        <div id="go-quarter" class="info-value quarter-color">Q1</div>
+      </div>
+      <div class="info-box">
+        <div class="info-label">Posición</div>
+        <div id="go-rank" class="info-value rank-color">#—</div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button id="btn-retry" class="btn">↺ REINTENTAR</button>
+      <button id="btn-ranking-go" class="btn btn-secondary">RANKING</button>
+    </div>
+  </div>
+
+  <!-- PANTALLA: Ranking -->
+  <div id="screen-ranking" class="screen">
+    <div class="leaderboard-title">🏆 RANKING GLOBAL</div>
+    <div class="lb-list" id="lb-list"></div>
+    <div class="btn-row">
+      <button id="btn-lb-refresh" class="btn btn-secondary">↻ REFRESCAR</button>
+      <button id="btn-lb-back" class="btn btn-secondary">← VOLVER</button>
+    </div>
+  </div>
+
+  <!-- PANTALLA: Display (modo proyección) -->
+  <div id="screen-display" class="screen">
+    <div class="title-main">BUDGET FLIGHT</div>
+    <div class="title-sub">RANKING EN VIVO · A&amp;D CENA Q4</div>
+    <div class="lb-list" id="lb-list-display"></div>
+  </div>
+</div>
+
+<script type="module">
+// ─── Firebase ────────────────────────────────────────────────────────────────
+import { initializeApp }                         from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getDatabase, ref, push, get, query,
+         orderByChild, limitToLast, onValue }    from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyBuovsy6DcH-q_pP5uetUz-mESFEieQiAQ",
+  authDomain:        "cena-aerospace.firebaseapp.com",
+  databaseURL:       "https://cena-aerospace-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "cena-aerospace",
+  storageBucket:     "cena-aerospace.firebasestorage.app",
+  messagingSenderId: "966686485310",
+  appId:             "1:966686485310:web:d28a8ce20fc280ce405a6f"
+};
+
+// ─── Constantes del juego ────────────────────────────────────────────────────
+const LOGIC_W            = 360;
+const LOGIC_H            = 640;
+const GRAVITY            = 1800;       // px/s² lógicos
+const FLAP_FORCE         = -520;       // px/s impulso hacia arriba
+const BASE_SCROLL_SPEED  = 200;        // px/s lógicos
+const SPEED_INCREMENT    = 0.08;       // factor adicional por trimestre
+const MAX_SPEED_MULT     = 2.5;
+const OBSTACLE_GAP_BASE  = 175;        // hueco inicial entre tijeras
+const OBSTACLE_GAP_DEC   = 6;         // reducción de hueco por trimestre
+const OBSTACLE_GAP_MIN   = 105;
+const OBSTACLE_SPAWN_INTERVAL = 300;  // px lógicos entre pares de tijeras
+const QUARTER_DISTANCE   = 2000;      // px para completar un trimestre
+const HIT_BOX_RATIO      = 0.72;
+const MAX_LEADERBOARD    = 10;
+const MAX_NAME_LENGTH    = 12;
+const PLAYER_W           = 42;
+const PLAYER_H           = 54;
+
+// ─── Utilidades ──────────────────────────────────────────────────────────────
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+function formatScore(n) {
+  return '€' + Math.floor(n).toLocaleString('es-ES');
+}
+
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s/60)}m`;
+  return `${Math.floor(s/3600)}h`;
+}
+
+// ─── LeaderboardManager ──────────────────────────────────────────────────────
+class LeaderboardManager {
+  constructor() {
+    this.db       = null;
+    this.offline  = false;
+    this._cache   = [];
+    this._unsub   = null;
+    try {
+      const app = initializeApp(firebaseConfig);
+      this.db = getDatabase(app);
+    } catch(e) {
+      this._goOffline();
+    }
+  }
+
+  _goOffline() {
+    this.offline = true;
+    document.getElementById('offline-banner').style.display = 'block';
+  }
+
+  async pushScore(name, score, quarter) {
+    const entry = { name, score, quarter, timestamp: Date.now() };
+    if (this.offline || !this.db) {
+      this._localPush(entry);
+      return;
+    }
+    try {
+      await push(ref(this.db, 'scores'), entry);
+    } catch(e) {
+      this._goOffline();
+      this._localPush(entry);
+    }
+  }
+
+  _localPush(entry) {
+    const data = this._localLoad();
+    data.push(entry);
+    localStorage.setItem('bf_scores', JSON.stringify(data));
+  }
+
+  _localLoad() {
+    try { return JSON.parse(localStorage.getItem('bf_scores') || '[]'); }
+    catch(e) { return []; }
+  }
+
+  // Devuelve top MAX_LEADERBOARD deduplicando por nombre (mejor score de cada jugador)
+  async fetchTop(limit = MAX_LEADERBOARD) {
+    if (this.offline || !this.db) {
+      return this._localTop(limit);
+    }
+    try {
+      const snap = await get(query(ref(this.db, 'scores'), orderByChild('score'), limitToLast(200)));
+      return this._processSnapshot(snap, limit);
+    } catch(e) {
+      this._goOffline();
+      return this._localTop(limit);
+    }
+  }
+
+  _processSnapshot(snap, limit) {
+    const map = new Map();
+    snap.forEach(child => {
+      const d = child.val();
+      if (!map.has(d.name) || d.score > map.get(d.name).score) {
+        map.set(d.name, d);
+      }
+    });
+    return [...map.values()].sort((a,b) => b.score - a.score).slice(0, limit);
+  }
+
+  _localTop(limit) {
+    const data = this._localLoad();
+    const map = new Map();
+    data.forEach(d => {
+      if (!map.has(d.name) || d.score > map.get(d.name).score) map.set(d.name, d);
+    });
+    return [...map.values()].sort((a,b) => b.score - a.score).slice(0, limit);
+  }
+
+  subscribeDisplay(callback) {
+    if (this.offline || !this.db) {
+      callback(this._localTop(MAX_LEADERBOARD));
+      return;
+    }
+    if (this._unsub) this._unsub();
+    this._unsub = onValue(ref(this.db, 'scores'), snap => {
+      callback(this._processSnapshot(snap, MAX_LEADERBOARD));
+    });
+  }
+
+  unsubscribeDisplay() {
+    if (this._unsub) { this._unsub(); this._unsub = null; }
+  }
+}
+
+// ─── InputManager ─────────────────────────────────────────────────────────────
+class InputManager {
+  constructor(canvas) {
+    this._pressed = false;
+    this._callbacks = [];
+    const fire = (e) => {
+      e.preventDefault();
+      this._pressed = true;
+      this._callbacks.forEach(cb => cb());
+    };
+    canvas.addEventListener('pointerdown', fire);
+    document.addEventListener('keydown', e => {
+      if (e.code === 'Space' || e.code === 'ArrowUp') fire(e);
+    });
+  }
+  onFlap(cb) { this._callbacks.push(cb); }
+  reset() { this._pressed = false; }
+}
+
+// ─── Player ───────────────────────────────────────────────────────────────────
+class Player {
+  constructor() { this.reset(); }
+
+  reset() {
+    this.x  = LOGIC_W * 0.28;
+    this.y  = LOGIC_H * 0.45;
+    this.vy = 0;
+    this.angle = 0;
+    this.alive = true;
+    this._blink = 0;
+  }
+
+  flap() {
+    this.vy = FLAP_FORCE;
+  }
+
+  update(dt) {
+    this.vy = clamp(this.vy + GRAVITY * dt, -800, 900);
+    this.y += this.vy * dt;
+    this.angle = clamp(this.vy * 0.001 * Math.PI, -0.45, 0.95);
+    this._blink += dt;
+  }
+
+  // Escala dinámica: más alto en pantalla → más inflado
+  get scale() {
+    const t = 1 - clamp(this.y / LOGIC_H, 0, 1);
+    return 1.0 + t * 0.32;
+  }
+
+  get w() { return PLAYER_W * this.scale; }
+  get h() { return PLAYER_H * this.scale; }
+
+  // Hit-box AABB en coordenadas lógicas
+  get hitbox() {
+    const hw = (this.w * HIT_BOX_RATIO) / 2;
+    const hh = (this.h * HIT_BOX_RATIO) / 2;
+    return { x: this.x - hw, y: this.y - hh, w: hw*2, h: hh*2 };
+  }
+
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    const s = this.scale;
+    const w = PLAYER_W * s, h = PLAYER_H * s;
+    const x0 = -w/2, y0 = -h/2;
+
+    // Cuerpo del PDF
+    ctx.fillStyle = '#F5F5DC';
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(x0, y0, w, h, 3);
+    ctx.fill();
+    ctx.stroke();
+
+    // Doblez esquina superior derecha
+    const fold = 9 * s;
+    ctx.fillStyle = '#ddd';
+    ctx.beginPath();
+    ctx.moveTo(x0 + w - fold, y0);
+    ctx.lineTo(x0 + w, y0 + fold);
+    ctx.lineTo(x0 + w - fold, y0 + fold);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#aaa';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Líneas de texto simuladas
+    ctx.fillStyle = '#ccc';
+    for (let i = 0; i < 4; i++) {
+      ctx.fillRect(x0 + 5*s, y0 + (16 + i*7)*s, (w - 10*s) * (i === 3 ? 0.6 : 1), 2*s);
+    }
+
+    // Sello "PROPUESTA Q4"
+    ctx.save();
+    ctx.translate(x0 + w/2, y0 + h*0.55);
+    ctx.rotate(-0.28);
+    ctx.strokeStyle = '#DC2626';
+    ctx.lineWidth = 1.5 * s;
+    ctx.strokeRect(-18*s, -7*s, 36*s, 14*s);
+    ctx.fillStyle = '#DC2626';
+    ctx.font = `bold ${6.5*s}px 'Courier New', monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('PROPUESTA', 0, -3*s);
+    ctx.fillText('Q4', 0, 4*s);
+    ctx.restore();
+
+    // Ojos cansados
+    const eyeY = y0 + 8 * s;
+    const eyeSep = 7 * s;
+    const blink = Math.sin(this._blink * 1.5) > 0.92;
+    ctx.fillStyle = '#444';
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 1.5;
+    [-eyeSep, eyeSep].forEach(ex => {
+      if (blink) {
+        // Párpado cerrado
+        ctx.beginPath();
+        ctx.moveTo(ex - 4*s, eyeY);
+        ctx.lineTo(ex + 4*s, eyeY);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.ellipse(ex, eyeY, 3.5*s, 2*s, 0, 0, Math.PI*2);
+        ctx.fill();
+        // Párpado caído
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ex - 4*s, eyeY - 1.5*s);
+        ctx.quadraticCurveTo(ex, eyeY - 3.5*s, ex + 4*s, eyeY - 1.5*s);
+        ctx.stroke();
+        ctx.strokeStyle = '#444';
+      }
+    });
+
+    ctx.restore();
+  }
+}
+
+// ─── ScissorsObstacle ─────────────────────────────────────────────────────────
+class ScissorsObstacle {
+  constructor(x, gapCenter, gapSize) {
+    this.x        = x;
+    this.gapCenter = gapCenter;
+    this.gapSize  = gapSize;
+    this.w        = 44;
+    this.passed   = false;
+  }
+
+  update(dt, speed) {
+    this.x -= speed * dt;
+  }
+
+  get topH()    { return this.gapCenter - this.gapSize / 2; }
+  get botY()    { return this.gapCenter + this.gapSize / 2; }
+  get offscreen() { return this.x + this.w < -20; }
+
+  _drawBlade(ctx, tipX, tipY, baseX, baseY, flip) {
+    const dx = baseX - tipX, dy = baseY - tipY;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const nx = -dy/len * 12, ny = dx/len * 12;
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(baseX + nx * (flip?-1:1), baseY + ny * (flip?-1:1));
+    ctx.lineTo(baseX - nx * (flip?-1:1), baseY - ny * (flip?-1:1));
+    ctx.closePath();
+  }
+
+  _drawScissor(ctx, isTop) {
+    const cx  = this.x + this.w / 2;
+    const edgeY  = isTop ? 0 : LOGIC_H;
+    const joinY  = isTop ? this.topH : this.botY;
+    const bladeH = Math.abs(joinY - edgeY);
+
+    // Hoja principal plateada
+    const grad = ctx.createLinearGradient(cx - 22, 0, cx + 22, 0);
+    grad.addColorStop(0,   '#555');
+    grad.addColorStop(0.4, '#ccc');
+    grad.addColorStop(0.6, '#eee');
+    grad.addColorStop(1,   '#888');
+    ctx.fillStyle = grad;
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+
+    // Hoja izquierda
+    this._drawBlade(ctx,
+      cx - 4, joinY,
+      cx - 6, edgeY, false);
+    ctx.fill(); ctx.stroke();
+
+    // Hoja derecha
+    this._drawBlade(ctx,
+      cx + 4, joinY,
+      cx + 6, edgeY, true);
+    ctx.fill(); ctx.stroke();
+
+    // Tornillo central
+    const screwY = joinY + (isTop ? -10 : 10);
+    ctx.fillStyle = '#999';
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, screwY, 5, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#777';
+    ctx.beginPath();
+    ctx.arc(cx, screwY, 2.5, 0, Math.PI*2);
+    ctx.fill();
+
+    // Anillo en la punta (base del mango)
+    ctx.strokeStyle = '#aaa';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx - 5,  edgeY + (isTop ? 14 : -14), 9, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx + 5,  edgeY + (isTop ? 14 : -14), 9, 0, Math.PI*2);
+    ctx.stroke();
+  }
+
+  draw(ctx) {
+    this._drawScissor(ctx, true);   // tijera superior
+    this._drawScissor(ctx, false);  // tijera inferior
+  }
+
+  hitboxTop()    { return { x: this.x, y: 0,         w: this.w, h: this.topH }; }
+  hitboxBottom() { return { x: this.x, y: this.botY, w: this.w, h: LOGIC_H - this.botY }; }
+}
+
+// ─── ObstacleSpawner ──────────────────────────────────────────────────────────
+class ObstacleSpawner {
+  constructor() { this.reset(); }
+
+  reset() {
+    this.obstacles   = [];
+    this._nextSpawnX = LOGIC_W + 120;
+    this._traveled   = 0;
+  }
+
+  update(dt, speed, quarter) {
+    this._traveled += speed * dt;
+    const gap = clamp(OBSTACLE_GAP_BASE - quarter * OBSTACLE_GAP_DEC, OBSTACLE_GAP_MIN, OBSTACLE_GAP_BASE);
+
+    if (this._traveled >= this._nextSpawnX) {
+      const margin = gap / 2 + 30;
+      const center = margin + Math.random() * (LOGIC_H - margin * 2);
+      this.obstacles.push(new ScissorsObstacle(LOGIC_W + 20, center, gap));
+      this._nextSpawnX += OBSTACLE_SPAWN_INTERVAL + Math.random() * 80;
+    }
+
+    for (const obs of this.obstacles) obs.update(dt, speed);
+    this.obstacles = this.obstacles.filter(o => !o.offscreen);
+  }
+
+  draw(ctx) {
+    this.obstacles.forEach(o => o.draw(ctx));
+  }
+}
+
+// ─── CollisionSystem ──────────────────────────────────────────────────────────
+class CollisionSystem {
+  static aabb(a, b) {
+    return a.x < b.x + b.w && a.x + a.w > b.x &&
+           a.y < b.y + b.h && a.y + a.h > b.y;
+  }
+
+  static check(player, obstacles) {
+    const hb = player.hitbox;
+    // Colisión con techo y suelo
+    if (hb.y < 0 || hb.y + hb.h > LOGIC_H) return true;
+    for (const obs of obstacles) {
+      if (CollisionSystem.aabb(hb, obs.hitboxTop()))    return true;
+      if (CollisionSystem.aabb(hb, obs.hitboxBottom())) return true;
+    }
+    return false;
+  }
+}
+
+// ─── Renderer ─────────────────────────────────────────────────────────────────
+class Renderer {
+  constructor(canvas) {
+    this.canvas  = canvas;
+    this.ctx     = canvas.getContext('2d');
+    this._bgX    = [0, 0, 0];  // offsets parallax por capa
+    this._archiveX = 0;
+    this._stampX   = 0;
+  }
+
+  // Fondo de papel timbrado + parallax 3 capas
+  drawBackground(speed, dt) {
+    const ctx = this.ctx;
+    // Capa 0: fondo papel
+    ctx.fillStyle = '#EDEDDE';
+    ctx.fillRect(0, 0, LOGIC_W, LOGIC_H);
+
+    // Líneas horizontales tenues (papel rayado)
+    ctx.strokeStyle = '#ddd';
+    ctx.lineWidth = 0.5;
+    for (let y = 20; y < LOGIC_H; y += 18) {
+      ctx.beginPath();
+      ctx.moveTo(0, y); ctx.lineTo(LOGIC_W, y);
+      ctx.stroke();
+    }
+
+    // Membrete superior
+    ctx.fillStyle = '#1E3A8A22';
+    ctx.fillRect(0, 0, LOGIC_W, 14);
+    ctx.fillStyle = '#1E3A8A88';
+    ctx.font = '6px Courier New';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('MINISTERIO DE DEFENSA  ·  PROPUESTA PRESUPUESTARIA Q4', 6, 7);
+
+    // Capa 1: archivadores lejanos (parallax 0.25x)
+    this._archiveX -= speed * 0.25 * dt;
+    if (this._archiveX < -LOGIC_W) this._archiveX += LOGIC_W;
+    this._drawArchives(ctx, this._archiveX);
+    this._drawArchives(ctx, this._archiveX + LOGIC_W);
+
+    // Capa 2: sellos y carpetas medios (parallax 0.55x)
+    this._stampX -= speed * 0.55 * dt;
+    if (this._stampX < -LOGIC_W * 1.5) this._stampX += LOGIC_W * 1.5;
+    this._drawStamps(ctx, this._stampX);
+    this._drawStamps(ctx, this._stampX + LOGIC_W * 1.5);
+  }
+
+  _drawArchives(ctx, ox) {
+    // Fila de archivadores en la parte baja
+    const colors = ['#6B7280', '#4B5563', '#9CA3AF', '#374151', '#6B7280'];
+    for (let i = 0; i < 5; i++) {
+      const x = ox + i * 72;
+      const y = LOGIC_H - 70;
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.globalAlpha = 0.18;
+      ctx.fillRect(x, y, 60, 60);
+      ctx.globalAlpha = 0.10;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x + 6, y + 8, 48, 8);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  _drawStamps(ctx, ox) {
+    const items = [
+      { x: ox + 30,  y: 100, text: 'REVISADO', color: '#1E3A8A44' },
+      { x: ox + 200, y: 200, text: 'PENDIENTE', color: '#F59E0B44' },
+      { x: ox + 100, y: 350, text: 'APROBADO', color: '#16A34A44' },
+      { x: ox + 250, y: 480, text: 'CONFIDENCIAL', color: '#7C3AED44' },
+    ];
+    items.forEach(it => {
+      ctx.save();
+      ctx.translate(it.x, it.y);
+      ctx.rotate(-0.25);
+      ctx.strokeStyle = it.color;
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(-36, -10, 72, 22);
+      ctx.fillStyle = it.color;
+      ctx.font = 'bold 9px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(it.text, 0, 1);
+      ctx.restore();
+    });
+  }
+
+  clear() {
+    this.ctx.clearRect(0, 0, LOGIC_W, LOGIC_H);
+  }
+}
+
+// ─── ScreenManager ────────────────────────────────────────────────────────────
+class ScreenManager {
+  constructor() {
+    this._screens = {
+      init:     document.getElementById('screen-init'),
+      gameover: document.getElementById('screen-gameover'),
+      ranking:  document.getElementById('screen-ranking'),
+      display:  document.getElementById('screen-display'),
+    };
+    this._hud    = document.getElementById('hud');
+    this._current = 'init';
+  }
+
+  show(name) {
+    Object.values(this._screens).forEach(s => s.classList.remove('active'));
+    this._hud.classList.remove('active');
+    if (name === 'playing') {
+      this._hud.classList.add('active');
+    } else if (this._screens[name]) {
+      this._screens[name].classList.add('active');
+    }
+    this._current = name;
+  }
+
+  updateHUD(quarter, score, miniRank) {
+    document.getElementById('hud-quarter').textContent = `Q${quarter + 1}`;
+    document.getElementById('hud-score').textContent   = formatScore(score);
+    const el = document.getElementById('hud-mini-rank');
+    el.innerHTML = miniRank.map((r, i) =>
+      `<div class="mini-rank-row${r.isMe ? ' me' : ''}">${i+1}. ${r.name.padEnd(8)} ${formatScore(r.score)}</div>`
+    ).join('');
+  }
+
+  setGameOver(score, quarter, rank) {
+    document.getElementById('go-score').textContent   = formatScore(score);
+    document.getElementById('go-quarter').textContent = `Q${quarter + 1}`;
+    document.getElementById('go-rank').textContent    = rank > 0 ? `#${rank}` : '#—';
+  }
+}
+
+// ─── Renderizado del leaderboard ──────────────────────────────────────────────
+const MEDALS = ['🥇', '🥈', '🥉'];
+
+function renderLeaderboard(entries, containerId, currentName = null) {
+  const el = document.getElementById(containerId);
+  if (!entries || entries.length === 0) {
+    el.innerHTML = '<div style="color:#555;text-align:center;padding:20px">Sin scores aún</div>';
+    return;
+  }
+  el.innerHTML = entries.map((e, i) => {
+    const isMe = currentName && e.name.toLowerCase() === currentName.toLowerCase();
+    const medal = i < 3 ? `<span class="lb-medal">${MEDALS[i]}</span>` : '';
+    return `<div class="lb-entry${isMe ? ' highlight' : ''}">
+      <span class="lb-pos">${i+1}.</span>
+      ${medal}
+      <span class="lb-name">${e.name.toUpperCase()}</span>
+      <span class="lb-score">${formatScore(e.score)}</span>
+      <span class="lb-time">${timeAgo(e.timestamp)}</span>
+    </div>`;
+  }).join('');
+}
+
+// ─── Game ─────────────────────────────────────────────────────────────────────
+class Game {
+  constructor() {
+    this.canvas  = document.getElementById('game-canvas');
+    this.ctx     = this.canvas.getContext('2d');
+    this.lb      = new LeaderboardManager();
+    this.input   = new InputManager(this.canvas);
+    this.player  = new Player();
+    this.spawner = new ObstacleSpawner();
+    this.renderer= new Renderer(this.canvas);
+    this.screens = new ScreenManager();
+
+    this._state      = 'init';
+    this._prevTime   = 0;
+    this._distance   = 0;
+    this._score      = 0;
+    this._quarter    = 0;
+    this._playerName = '';
+    this._topCache   = [];
+    this._scale      = 1;
+    this._offsetX    = 0;
+    this._offsetY    = 0;
+
+    // Animación idle en pantalla de inicio
+    this._idleT = 0;
+
+    this._setupDOM();
+    this._resize();
+    window.addEventListener('resize', () => this._resize());
+    this.input.onFlap(() => this._onFlap());
+    requestAnimationFrame(t => this._loop(t));
+  }
+
+  _setupDOM() {
+    document.getElementById('btn-play').addEventListener('click', () => this._startGame());
+    document.getElementById('player-name').addEventListener('keydown', e => {
+      if (e.key === 'Enter') this._startGame();
+    });
+    document.getElementById('btn-ranking-init').addEventListener('click', () => this._showRanking('init'));
+    document.getElementById('btn-retry').addEventListener('click', () => this._startGame());
+    document.getElementById('btn-ranking-go').addEventListener('click', () => this._showRanking('gameover'));
+    document.getElementById('btn-lb-refresh').addEventListener('click', () => this._refreshRanking());
+    document.getElementById('btn-lb-back').addEventListener('click', () => {
+      this.screens.show(this._rankingFrom || 'init');
+    });
+  }
+
+  _resize() {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const scaleX = vw / LOGIC_W, scaleY = vh / LOGIC_H;
+    this._scale = Math.min(scaleX, scaleY);
+    const w = Math.floor(LOGIC_W * this._scale);
+    const h = Math.floor(LOGIC_H * this._scale);
+    this.canvas.width  = w;
+    this.canvas.height = h;
+    this.canvas.style.width  = w + 'px';
+    this.canvas.style.height = h + 'px';
+    const wrapper = document.getElementById('game-wrapper');
+    wrapper.style.width  = w + 'px';
+    wrapper.style.height = h + 'px';
+  }
+
+  _onFlap() {
+    if (this._state === 'playing') {
+      this.player.flap();
+    } else if (this._state === 'init') {
+      // tap en la pantalla de inicio no inicia automáticamente
+    }
+  }
+
+  async _startGame() {
+    const nameInput = document.getElementById('player-name');
+    const name = nameInput.value.trim().slice(0, MAX_NAME_LENGTH);
+    if (!name) { nameInput.focus(); nameInput.style.borderColor = '#DC2626'; return; }
+    nameInput.style.borderColor = '';
+    this._playerName = name;
+    this._distance   = 0;
+    this._score      = 0;
+    this._quarter    = 0;
+    this.player.reset();
+    this.spawner.reset();
+    this._topCache = await this.lb.fetchTop(MAX_LEADERBOARD);
+    this._state = 'playing';
+    this.screens.show('playing');
+    this.player.flap(); // primer impulso automático
+  }
+
+  async _endGame() {
+    this._state = 'gameover';
+    await this.lb.pushScore(this._playerName, this._score, this._quarter);
+    const top = await this.lb.fetchTop(50);
+    this._topCache = top.slice(0, MAX_LEADERBOARD);
+    const rank = top.findIndex(e => e.name.toLowerCase() === this._playerName.toLowerCase()) + 1;
+    this.screens.setGameOver(this._score, this._quarter, rank);
+    this.screens.show('gameover');
+  }
+
+  async _showRanking(from) {
+    this._rankingFrom = from;
+    const top = await this.lb.fetchTop(MAX_LEADERBOARD);
+    renderLeaderboard(top, 'lb-list', this._playerName);
+    this.screens.show('ranking');
+  }
+
+  async _refreshRanking() {
+    document.getElementById('btn-lb-refresh').textContent = '...';
+    const top = await this.lb.fetchTop(MAX_LEADERBOARD);
+    renderLeaderboard(top, 'lb-list', this._playerName);
+    document.getElementById('btn-lb-refresh').textContent = '↻ REFRESCAR';
+  }
+
+  _getSpeed() {
+    return BASE_SCROLL_SPEED * Math.min(1 + this._quarter * SPEED_INCREMENT, MAX_SPEED_MULT);
+  }
+
+  _getMult() {
+    return 1 + this._quarter * 0.5;
+  }
+
+  _loop(timestamp) {
+    const dt = Math.min((timestamp - this._prevTime) / 1000, 0.05);
+    this._prevTime = timestamp;
+
+    if (this._state === 'playing') {
+      this._updatePlaying(dt);
+    } else if (this._state === 'init') {
+      this._idleT += dt;
+    }
+
+    this._draw();
+    requestAnimationFrame(t => this._loop(t));
+  }
+
+  _updatePlaying(dt) {
+    const speed = this._getSpeed();
+    this._distance += speed * dt;
+    this._quarter   = Math.floor(this._distance / QUARTER_DISTANCE);
+    this._score    += (speed * dt / 10) * this._getMult();
+
+    this.player.update(dt);
+    this.spawner.update(dt, speed, this._quarter);
+
+    // Marcar obstáculos superados (para evitar puntuaciones duplicadas en futuros features)
+    this.spawner.obstacles.forEach(obs => {
+      if (!obs.passed && obs.x + obs.w < this.player.x) obs.passed = true;
+    });
+
+    if (CollisionSystem.check(this.player, this.spawner.obstacles)) {
+      this.player.alive = false;
+      this._endGame();
+    }
+
+    // Mini ranking lateral
+    const miniSize = Math.min(3, this._topCache.length);
+    const mini = this._topCache.slice(0, miniSize).map(e => ({
+      name: e.name, score: e.score,
+      isMe: e.name.toLowerCase() === this._playerName.toLowerCase()
+    }));
+    this.screens.updateHUD(this._quarter, this._score, mini);
+  }
+
+  _draw() {
+    const ctx = this.ctx;
+    const s   = this._scale;
+    ctx.save();
+    ctx.scale(s, s);
+
+    const speed = this._state === 'playing' ? this._getSpeed() : BASE_SCROLL_SPEED * 0.3;
+    const dt    = 1/60; // aproximado para background
+
+    if (this._state === 'playing' || this._state === 'init') {
+      this.renderer.drawBackground(speed, dt);
+    } else {
+      ctx.fillStyle = '#EDEDDE';
+      ctx.fillRect(0, 0, LOGIC_W, LOGIC_H);
+    }
+
+    if (this._state === 'playing') {
+      this.spawner.draw(ctx);
+      this.player.draw(ctx);
+    }
+
+    if (this._state === 'init') {
+      // Animación idle: PDF flotando
+      ctx.save();
+      const idleY = LOGIC_H * 0.45 + Math.sin(this._idleT * 1.8) * 12;
+      ctx.translate(LOGIC_W / 2, idleY);
+      const tempPlayer = new Player();
+      tempPlayer.x = 0; tempPlayer.y = 0; tempPlayer._blink = this._idleT;
+      tempPlayer.draw(ctx);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+}
+
+// ─── Modo Display ─────────────────────────────────────────────────────────────
+class DisplayMode {
+  constructor(lb) {
+    this.lb = lb;
+    document.getElementById('screen-display').classList.add('active');
+    document.getElementById('game-canvas').style.display = 'none';
+    this.lb.subscribeDisplay(entries => {
+      renderLeaderboard(entries, 'lb-list-display', null);
+    });
+  }
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+const params = new URLSearchParams(location.search);
+if (params.get('mode') === 'display') {
+  const lb = new LeaderboardManager();
+  new DisplayMode(lb);
+} else {
+  new Game();
+}
+</script>
+</body>
+</html>
