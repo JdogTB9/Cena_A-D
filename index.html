@@ -369,8 +369,10 @@ class LeaderboardManager {
     this._unsub   = null;
     try {
       const app = initializeApp(firebaseConfig);
-      this.db = getDatabase(app);
+      // URL explícita obligatoria en bases de datos de región europea
+      this.db = getDatabase(app, firebaseConfig.databaseURL);
     } catch(e) {
+      console.error('[Firebase init]', e);
       this._goOffline();
     }
   }
@@ -388,7 +390,9 @@ class LeaderboardManager {
     }
     try {
       await push(ref(this.db, 'scores'), entry);
+      console.log('[Firebase] Score guardado:', entry);
     } catch(e) {
+      console.error('[Firebase push]', e);
       this._goOffline();
       this._localPush(entry);
     }
@@ -414,6 +418,7 @@ class LeaderboardManager {
       const snap = await get(query(ref(this.db, 'scores'), orderByChild('score'), limitToLast(200)));
       return this._processSnapshot(snap, limit);
     } catch(e) {
+      console.error('[Firebase fetch]', e);
       this._goOffline();
       return this._localTop(limit);
     }
