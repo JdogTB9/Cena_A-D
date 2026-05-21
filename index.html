@@ -131,20 +131,21 @@
     text-align: center;
     min-width: 200px;
   }
-  .info-label { color: #555; font-size: clamp(9px, 2.5vw, 13px); letter-spacing: 0.15em; text-transform: uppercase; }
+  .info-label { color: #888; font-size: clamp(9px, 2.5vw, 13px); letter-spacing: 0.15em; text-transform: uppercase; }
   .info-value { color: #eee; font-size: clamp(14px, 4vw, 24px); font-weight: bold; margin-top: 4px; }
   .info-value.score-color { color: #4CAF50; }
-  .info-value.quarter-color { color: #1E3A8A; }
+  .info-value.quarter-color { color: #FFFFFF; }
   .info-value.rank-color { color: #F59E0B; }
 
   /* Leaderboard */
   .leaderboard-title {
-    color: #1E3A8A;
+    color: #FFFFFF;
     font-size: clamp(14px, 4vw, 24px);
     font-weight: bold;
     letter-spacing: 0.15em;
     text-transform: uppercase;
     text-align: center;
+    text-shadow: 0 0 20px #3B82F6AA, 0 2px 4px #000a;
   }
   .lb-list {
     width: 90%;
@@ -224,9 +225,9 @@
   }
   #hud-quarter {
     color: #60A5FA;
-    font-size: clamp(14px, 4vw, 22px);
+    font-size: clamp(11px, 3vw, 17px);
     font-weight: bold;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.08em;
     white-space: nowrap;
   }
   #hud-score {
@@ -252,7 +253,7 @@
 
   #game-intro {
     color: #6B7280;
-    font-size: clamp(9px, 2.4vw, 13px);
+    font-size: clamp(13px, 4vw, 18px);
     text-align: center;
     max-width: 280px;
     line-height: 1.6;
@@ -309,6 +310,7 @@
     <div class="btn-row">
       <button id="btn-retry" class="btn">↺ REINTENTAR</button>
       <button id="btn-ranking-go" class="btn btn-secondary">RANKING</button>
+      <button id="btn-home-go" class="btn btn-secondary">← HOME</button>
     </div>
   </div>
 
@@ -319,6 +321,7 @@
     <div class="btn-row">
       <button id="btn-lb-refresh" class="btn btn-secondary">↻ REFRESCAR</button>
       <button id="btn-lb-back" class="btn btn-secondary">← VOLVER</button>
+      <button id="btn-home-lb" class="btn btn-secondary">← HOME</button>
     </div>
   </div>
 
@@ -371,6 +374,14 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 function formatScore(n) {
   return '€' + Math.floor(n).toLocaleString('es-ES');
+}
+
+function formatQuarter(q) {
+  // q=0 → Q2 2026, q=1 → Q3 2026, q=2 → Q4 2026, q=3 → Q1 2027, ...
+  const abs  = 1 + q;
+  const year = 2026 + Math.floor(abs / 4);
+  const num  = (abs % 4) + 1;
+  return `Q${num} ${year}`;
 }
 
 function timeAgo(ts) {
@@ -911,7 +922,7 @@ class ScreenManager {
   }
 
   updateHUD(quarter, score, miniRank) {
-    document.getElementById('hud-quarter').textContent = `Q${quarter + 1}`;
+    document.getElementById('hud-quarter').textContent = formatQuarter(quarter);
     document.getElementById('hud-score').textContent   = formatScore(score);
     const el = document.getElementById('hud-mini-rank');
     el.innerHTML = miniRank.map((r, i) =>
@@ -921,7 +932,7 @@ class ScreenManager {
 
   setGameOver(score, quarter, rank) {
     document.getElementById('go-score').textContent   = formatScore(score);
-    document.getElementById('go-quarter').textContent = `Q${quarter + 1}`;
+    document.getElementById('go-quarter').textContent = formatQuarter(quarter);
     document.getElementById('go-rank').textContent    = rank > 0 ? `#${rank}` : '#—';
   }
 }
@@ -993,6 +1004,8 @@ class Game {
     document.getElementById('btn-lb-back').addEventListener('click', () => {
       this.screens.show(this._rankingFrom || 'init');
     });
+    document.getElementById('btn-home-go').addEventListener('click', () => this.screens.show('init'));
+    document.getElementById('btn-home-lb').addEventListener('click', () => this.screens.show('init'));
   }
 
   _resize() {
