@@ -49,13 +49,13 @@
 
   /* Tipografía base */
   .title-main {
-    color: #1E3A8A;
+    color: #FFFFFF;
     font-size: clamp(18px, 6vw, 40px);
     font-weight: bold;
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    text-shadow: 0 0 20px #1E3A8A88;
+    text-shadow: 0 0 30px #3B82F6AA, 0 2px 4px #000a;
   }
   .title-sub {
     color: #888;
@@ -209,39 +209,56 @@
     display: none;
   }
   #hud.active { display: block; }
-  #hud-quarter {
+  #hud-bar {
     position: absolute;
-    top: 8px; left: 10px;
-    color: #1E3A8A;
-    font-size: clamp(13px, 3.5vw, 20px);
+    bottom: 0; left: 0; right: 0;
+    height: 44px;
+    background: rgba(5, 5, 20, 0.82);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    gap: 8px;
+    border-top: 1px solid #ffffff11;
+  }
+  #hud-quarter {
+    color: #60A5FA;
+    font-size: clamp(14px, 4vw, 22px);
     font-weight: bold;
-    letter-spacing: 0.1em;
-    text-shadow: 0 1px 3px #000a;
+    letter-spacing: 0.12em;
+    white-space: nowrap;
   }
   #hud-score {
-    position: absolute;
-    top: 8px; right: 10px;
     color: #4CAF50;
-    font-size: clamp(11px, 3vw, 17px);
-    text-align: right;
-    text-shadow: 0 1px 3px #000a;
+    font-size: clamp(13px, 3.5vw, 20px);
+    font-weight: bold;
+    white-space: nowrap;
+    flex: 1;
+    text-align: center;
   }
   #hud-mini-rank {
-    position: absolute;
-    top: 50px; left: 6px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    background: #0008;
-    border-radius: 4px;
-    padding: 4px 6px;
+    gap: 1px;
+    align-items: flex-end;
   }
   .mini-rank-row {
-    color: #aaa;
-    font-size: clamp(9px, 2.5vw, 12px);
+    color: #888;
+    font-size: clamp(8px, 2.2vw, 11px);
     white-space: nowrap;
   }
   .mini-rank-row.me { color: #F59E0B; font-weight: bold; }
+
+  #game-intro {
+    color: #6B7280;
+    font-size: clamp(9px, 2.4vw, 13px);
+    text-align: center;
+    max-width: 280px;
+    line-height: 1.6;
+    letter-spacing: 0.03em;
+    padding: 0 4px;
+  }
 </style>
 </head>
 <body>
@@ -250,9 +267,11 @@
 
   <!-- HUD de partida -->
   <div id="hud">
-    <div id="hud-quarter">Q1</div>
-    <div id="hud-score">€0</div>
-    <div id="hud-mini-rank"></div>
+    <div id="hud-bar">
+      <div id="hud-quarter">Q1</div>
+      <div id="hud-score">€0</div>
+      <div id="hud-mini-rank"></div>
+    </div>
   </div>
 
   <!-- Banner offline -->
@@ -261,12 +280,13 @@
   <!-- PANTALLA: Inicio -->
   <div id="screen-init" class="screen active">
     <div class="title-main">BUDGET FLIGHT</div>
-    <div class="title-sub">Aerospace &amp; Defense · Q4</div>
+    <div class="title-sub">Aerospace &amp; Defense</div>
     <input id="player-name" type="text" maxlength="12" placeholder="Tu nombre..." autocomplete="off" spellcheck="false">
     <div class="btn-row">
       <button id="btn-play" class="btn">▶ JUGAR</button>
       <button id="btn-ranking-init" class="btn btn-secondary">RANKING</button>
     </div>
+    <p id="game-intro">Eres una Propuesta de Presupuesto Q4. Vuela por los pasillos de la burocracia sin que te pillen las Tijeras de Recorte. Cuanto más avances, mayor es tu Budget.</p>
   </div>
 
   <!-- PANTALLA: Game Over -->
@@ -606,11 +626,11 @@ class Player {
 // ─── ScissorsObstacle ─────────────────────────────────────────────────────────
 class ScissorsObstacle {
   constructor(x, gapCenter, gapSize) {
-    this.x        = x;
+    this.x         = x;
     this.gapCenter = gapCenter;
-    this.gapSize  = gapSize;
-    this.w        = 44;
-    this.passed   = false;
+    this.gapSize   = gapSize;
+    this.w         = 80;
+    this.passed    = false;
   }
 
   update(dt, speed) {
@@ -621,67 +641,98 @@ class ScissorsObstacle {
   get botY()    { return this.gapCenter + this.gapSize / 2; }
   get offscreen() { return this.x + this.w < -20; }
 
-  _drawBlade(ctx, tipX, tipY, baseX, baseY, flip) {
-    const dx = baseX - tipX, dy = baseY - tipY;
-    const len = Math.sqrt(dx*dx + dy*dy);
-    const nx = -dy/len * 12, ny = dx/len * 12;
-    ctx.beginPath();
-    ctx.moveTo(tipX, tipY);
-    ctx.lineTo(baseX + nx * (flip?-1:1), baseY + ny * (flip?-1:1));
-    ctx.lineTo(baseX - nx * (flip?-1:1), baseY - ny * (flip?-1:1));
-    ctx.closePath();
-  }
-
   _drawScissor(ctx, isTop) {
-    const cx  = this.x + this.w / 2;
-    const edgeY  = isTop ? 0 : LOGIC_H;
-    const joinY  = isTop ? this.topH : this.botY;
-    const bladeH = Math.abs(joinY - edgeY);
+    const cx    = this.x + this.w / 2;
+    const edgeY = isTop ? 0 : LOGIC_H;
+    const tipY  = isTop ? this.topH : this.botY;
+    const dir   = isTop ? 1 : -1;   // 1 = borde arriba, -1 = borde abajo
 
-    // Hoja principal plateada
-    const grad = ctx.createLinearGradient(cx - 22, 0, cx + 22, 0);
-    grad.addColorStop(0,   '#555');
-    grad.addColorStop(0.4, '#ccc');
-    grad.addColorStop(0.6, '#eee');
-    grad.addColorStop(1,   '#888');
+    // Apertura en V: las dos hojas se separan 32px en el borde de pantalla
+    const spreadBase = 32;
+    const tipHalf    = 4;  // semi-ancho en la punta (filo)
+    const baseHalf   = 14; // semi-ancho de cada hoja en el mango
+
+    // Gradiente metálico horizontal para ambas hojas
+    const grad = ctx.createLinearGradient(cx - spreadBase, 0, cx + spreadBase, 0);
+    grad.addColorStop(0,   '#666');
+    grad.addColorStop(0.3, '#d0d0d0');
+    grad.addColorStop(0.5, '#f5f5f5');
+    grad.addColorStop(0.7, '#d0d0d0');
+    grad.addColorStop(1,   '#666');
+
+    // Hoja izquierda: cuadrilátero trapezoidal
+    //   punta izquierda (junto al filo) → base izquierda (borde pantalla)
+    ctx.beginPath();
+    ctx.moveTo(cx - tipHalf,              tipY);
+    ctx.lineTo(cx,                        tipY);
+    ctx.lineTo(cx - spreadBase + baseHalf, edgeY);
+    ctx.lineTo(cx - spreadBase - baseHalf, edgeY);
+    ctx.closePath();
     ctx.fillStyle = grad;
+    ctx.fill();
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 1;
+    ctx.stroke();
 
-    // Hoja izquierda
-    this._drawBlade(ctx,
-      cx - 4, joinY,
-      cx - 6, edgeY, false);
+    // Hoja derecha: simétrica
+    ctx.beginPath();
+    ctx.moveTo(cx + tipHalf,              tipY);
+    ctx.lineTo(cx,                        tipY);
+    ctx.lineTo(cx + spreadBase - baseHalf, edgeY);
+    ctx.lineTo(cx + spreadBase + baseHalf, edgeY);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Filo central (línea de corte) entre las dos hojas
+    ctx.strokeStyle = '#fff8';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx, tipY);
+    ctx.lineTo(cx, lerp(tipY, edgeY, 0.18));
+    ctx.stroke();
+
+    // Tornillo/pivote donde se cruzan las hojas (~25% del camino al borde)
+    const pivotY = lerp(tipY, edgeY, 0.25);
+    ctx.fillStyle = '#bbb';
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, pivotY, 7, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-
-    // Hoja derecha
-    this._drawBlade(ctx,
-      cx + 4, joinY,
-      cx + 6, edgeY, true);
-    ctx.fill(); ctx.stroke();
-
-    // Tornillo central
-    const screwY = joinY + (isTop ? -10 : 10);
-    ctx.fillStyle = '#999';
+    // Cruz del tornillo
     ctx.strokeStyle = '#555';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(cx, screwY, 5, 0, Math.PI*2);
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#777';
-    ctx.beginPath();
-    ctx.arc(cx, screwY, 2.5, 0, Math.PI*2);
-    ctx.fill();
+    ctx.moveTo(cx - 4, pivotY); ctx.lineTo(cx + 4, pivotY);
+    ctx.moveTo(cx, pivotY - 4); ctx.lineTo(cx, pivotY + 4);
+    ctx.stroke();
 
-    // Anillo en la punta (base del mango)
-    ctx.strokeStyle = '#aaa';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(cx - 5,  edgeY + (isTop ? 14 : -14), 9, 0, Math.PI*2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(cx + 5,  edgeY + (isTop ? 14 : -14), 9, 0, Math.PI*2);
-    ctx.stroke();
+    // Mangos: dos arcos elípticos grandes en el borde de pantalla
+    const ringY   = edgeY + dir * 22;
+    const ringOffX = spreadBase;
+    [[cx - ringOffX, '#aaa'], [cx + ringOffX, '#aaa']].forEach(([rx]) => {
+      // Aro exterior
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.ellipse(rx, ringY, 14, 11, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      // Relleno interior del aro
+      ctx.fillStyle = '#333';
+      ctx.beginPath();
+      ctx.ellipse(rx, ringY, 10, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Brillo interior
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(rx, ringY, 10, 7, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    });
   }
 
   draw(ctx) {
@@ -689,8 +740,9 @@ class ScissorsObstacle {
     this._drawScissor(ctx, false);  // tijera inferior
   }
 
-  hitboxTop()    { return { x: this.x, y: 0,         w: this.w, h: this.topH }; }
-  hitboxBottom() { return { x: this.x, y: this.botY, w: this.w, h: LOGIC_H - this.botY }; }
+  // Hitbox más estrecha que el visual (los mangos son decorativos)
+  hitboxTop()    { return { x: this.x + 10, y: 0,         w: this.w - 20, h: this.topH }; }
+  hitboxBottom() { return { x: this.x + 10, y: this.botY, w: this.w - 20, h: LOGIC_H - this.botY }; }
 }
 
 // ─── ObstacleSpawner ──────────────────────────────────────────────────────────
@@ -1048,8 +1100,8 @@ class Game {
       this._endGame();
     }
 
-    // Mini ranking lateral
-    const miniSize = Math.min(3, this._topCache.length);
+    // Mini ranking en barra inferior (máx 2 filas para caber en 44px)
+    const miniSize = Math.min(2, this._topCache.length);
     const mini = this._topCache.slice(0, miniSize).map(e => ({
       name: e.name, score: e.score,
       isMe: e.name.toLowerCase() === this._playerName.toLowerCase()
